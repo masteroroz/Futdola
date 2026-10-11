@@ -1,2 +1,0 @@
-# Futdola
-Nuevo simulador futbol 
