@@ -17,6 +17,14 @@
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
         button { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: 600; cursor: pointer; }
         button:hover { background: #1d4ed8; }
+        
+        .btn-busqueda { background: #0284c7; padding: 11px 12px; font-size: 14px; margin-top: 8px; margin-bottom: 12px; border-radius: 8px; width: 100%; color: white; font-weight: 600; }
+        .btn-busqueda:hover { background: #0369a1; }
+        .btn-limpiar { background: #dc2626; margin-top: 10px; }
+        .btn-limpiar:hover { background: #b91c1c; }
+
+        .suggestions-box { max-height: 180px; overflow-y: auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; margin-top: -4px; margin-bottom: 8px; position: relative; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
         .result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0; }
         .res-local { background: #dbeafe; padding: 15px; border-radius: 10px; text-align: center; }
         .res-draw { background: #fef3c7; padding: 15px; border-radius: 10px; text-align: center; }
@@ -38,7 +46,15 @@
         .pair-percent { color: #374151; font-size: 14px; }
         .section-divider { margin: 24px 0; height: 1px; background: #e5e7eb; }
         .liga-selector { margin-bottom: 15px; }
-        .liga-section { border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px; }
+
+        .parley-card { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 16px; margin-top: 20px; }
+        .parley-title { color: #15803d; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+        .parley-item { background: white; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 8px; margin-top: 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .parley-prob { background: #dcfce7; color: #166534; font-weight: bold; padding: 4px 8px; border-radius: 6px; font-size: 13px; }
+
+        .comparison-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 14px; margin-top: 15px; font-size: 14px; }
+        .comp-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .comp-row:last-child { margin-bottom: 0; }
 
         /* ESTILOS DE AUTENTICACIÓN Y LOGIN */
         #login-overlay {
@@ -76,7 +92,7 @@
         </div>
     </div>
 
-    <!-- ⚙️ BOTÓN DE ADMINISTRACIÓN DE CLAVE SECUNDARIA (SÓLO VISIBLE PARA MASTER) -->
+    <!-- ⚙️ PANEL DE ADMIN -->
     <div id="admin-panel" class="admin-controls hidden">
         <button class="btn-admin" onclick="cambiarClaveSecundaria()">🔑 Cambiar clave secundaria</button>
     </div>
@@ -92,15 +108,54 @@
 
         <div class="card">
             <h3>Selecciona los equipos</h3>
+            
+            <!-- SECCIÓN LOCAL -->
             <label>🏠 Equipo Local</label>
             <input type="text" id="local-search" placeholder="Escribe el nombre del equipo..." autocomplete="off">
-            <div id="local-results"></div>
-            
+            <div id="local-results" class="suggestions-box"></div>
+            <label style="font-size: 12px; color: #333; font-weight:600;">⭐ Rating Sofascore XI (Local):</label>
+            <input type="number" id="rating-local" step="0.01" min="3.00" max="10.00" value="" placeholder="Ej. 6.74">
+
+            <div class="section-divider" style="margin: 18px 0;"></div>
+
+            <!-- SECCIÓN VISITA -->
             <label>✈️ Equipo Visita</label>
             <input type="text" id="away-search" placeholder="Escribe el nombre del equipo..." autocomplete="off">
-            <div id="away-results"></div>
+            <div id="away-results" class="suggestions-box"></div>
+            <label style="font-size: 12px; color: #333; font-weight:600;">⭐ Rating Sofascore XI (Visita):</label>
+            <input type="number" id="rating-visita" step="0.01" min="3.00" max="10.00" value="" placeholder="Ej. 7.41">
 
-            <button onclick="ejecutarSimulacion()" style="margin-top: 15px;">🎯 Ejecutar simulación</button>
+            <!-- FATIGA O CARGA DE DÍAS -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                <div>
+                    <label style="font-size: 12px; color: #666;">⚡ Días Carga Local</label>
+                    <select id="fatiga-local">
+                        <option value="1.00" selected>Normal (0%)</option>
+                        <option value="1.05">Descansado (+5%)</option>
+                        <option value="0.92">Semana Doble (-8%)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: #666;">⚡ Días Carga Visita</label>
+                    <select id="fatiga-visita">
+                        <option value="1.00" selected>Normal (0%)</option>
+                        <option value="1.05">Descansado (+5%)</option>
+                        <option value="0.92">Semana Doble (-8%)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="section-divider" style="margin: 18px 0;"></div>
+
+            <!-- MÓDULO DE ACCESO DIRECTO A SOFASCORE -->
+            <h3>📱 Consulta Sofascore</h3>
+            <button type="button" onclick="abrirSofascore()" class="btn-busqueda">🌐 Ir a la Página Principal de Sofascore (Fútbol)</button>
+            
+            <label style="font-size: 12px; color: #333; font-weight:600; margin-top: 10px; display:block;">🟨 Promedio de Tarjetas Amarillas del Árbitro (por partido):</label>
+            <input type="number" id="arbitro-promedio" step="0.10" min="1.00" max="10.00" value="4.50" placeholder="Ej. 5.20">
+
+            <button onclick="ejecutarSimulacion()" style="margin-top: 18px;">🎯 Ejecutar simulación</button>
+            <button onclick="limpiarFormulario()" class="btn-limpiar">🧹 Limpiar / Nuevo Partido</button>
         </div>
 
         <div class="card" id="sim-results" style="display:none;">
@@ -125,12 +180,33 @@
                 <strong>Goles esperados:</strong> <span id="g-local-exp">--</span> vs <span id="g-away-exp">--</span>
             </p>
             
+            <!-- COMPARATIVA DE ATAQUE Y DEFENSA DE TABLA -->
+            <div class="comparison-card">
+                <div class="comp-row">
+                    <span>⚽ <strong>Mejor Ataque:</strong></span>
+                    <span id="best-attack-name" style="font-weight:bold; color:#1e40af;">--</span>
+                </div>
+                <div class="comp-row">
+                    <span>🛡️ <strong>Mejor Defensa:</strong></span>
+                    <span id="best-defense-name" style="font-weight:bold; color:#15803d;">--</span>
+                </div>
+                <div class="comp-row" style="margin-top:6px; font-size:12px; color:#4b5563; border-top:1px dashed #cbd5e1; padding-top:6px;">
+                    <span>📊 <strong>Balance táctico:</strong> <span id="tactical-summary">--</span></span>
+                </div>
+            </div>
+
             <div style="margin-top:12px; line-height:1.8; font-size:15px; background:#f8f9fa; padding:12px; border-radius:8px;">
                 <div>🎯 <strong>Tiros totales esperados:</strong> <span id="s-shots">--</span></div>
                 <div>📐 <strong>Córners esperados:</strong> L: <span id="corner-local-exp">--</span> / V: <span id="corner-away-exp">--</span> → Total: <span id="s-corners">--</span></div>
                 <div>🟨 <strong>Tarjetas esperadas:</strong> L: <span id="card-local-exp">--</span> / V: <span id="card-away-exp">--</span> → Total: <span id="s-cards">--</span></div>
                 <div>✅ <strong>Más de 2.5 goles:</strong> <span id="s-over25">--</span></div>
                 <div>✅ <strong>Ambos anotan:</strong> <span id="s-btts">--</span></div>
+            </div>
+
+            <!-- 🎟️ PARLEY SEGURO SUGERIDO -->
+            <div class="parley-card">
+                <div class="parley-title">🛡️ Parley Seguro Recomendado</div>
+                <div id="parley-content">Generando combinadas de alta probabilidad...</div>
             </div>
 
             <div class="section-divider"></div>
@@ -270,9 +346,17 @@
     </div>
 
 <script>
-// --- SISTEMA DE AUTENTICACIÓN ---
+// --- SISTEMA DE AUTENTICACIÓN PERSISTENTE (LOCALSTORAGE) ---
 const PASS_MASTER = "oroz2026";
 let passSecundaria = localStorage.getItem('futdola_pass_secundaria') || "invitado123";
+
+window.addEventListener('DOMContentLoaded', () => {
+    const sesionActiva = localStorage.getItem('futdola_autenticado');
+    if (sesionActiva === 'true') {
+        const esMaster = localStorage.getItem('futdola_es_master') === 'true';
+        desbloquearApp(esMaster);
+    }
+});
 
 function checkEnter(e) {
     if (e.key === 'Enter') validarAcceso();
@@ -283,8 +367,12 @@ function validarAcceso() {
     const errorDiv = document.getElementById('login-error');
     
     if (input === PASS_MASTER) {
+        localStorage.setItem('futdola_autenticado', 'true');
+        localStorage.setItem('futdola_es_master', 'true');
         desbloquearApp(true);
     } else if (input === passSecundaria) {
+        localStorage.setItem('futdola_autenticado', 'true');
+        localStorage.setItem('futdola_es_master', 'false');
         desbloquearApp(false);
     } else {
         errorDiv.style.display = 'block';
@@ -309,21 +397,18 @@ function cambiarClaveSecundaria() {
     }
 }
 
-// --- LOGICA DEL SIMULADOR ---
+function normalizeText(text) {
+    return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+// --- CONFIGURACIÓN ---
 const AJUSTES = {
-    FACTOR_LOCAL: 1.10,
-    GOALS_ATTACK_WEIGHT: 0.65,
-    GOALS_DEFENSE_WEIGHT: 0.35,
-    ELO_INFLUENCE: 0.0015,
-    CORNERS_HOME_BOOST: 1.08,
-    CORNERS_LOCAL_WEIGHT: 0.55,
-    CORNERS_VISIT_WEIGHT: 0.45,
-    CORNERS_TOTAL_ADJUST: 0.95,
-    CARDS_AWAY_BOOST: 1.05,
-    MIN_GOALS: 0.4,
-    EFFICIENCY_VAR: 0.18,
-    DRAW_THRESHOLD: 50,
-    DRAW_GOALS_RED: 0.92
+    FACTOR_LOCAL_GOALS: 1.10,
+    ELO_INFLUENCE: 0.0012,
+    DRAW_THRESHOLD: 45,
+    DRAW_GOALS_RED: 0.90,
+    MIN_GOALS: 0.35,
+    CARDS_AWAY_BOOST: 1.05
 };
 
 let equipos = [];
@@ -424,11 +509,18 @@ function llenarSelectorLigas() {
 function setupBusqueda(inputId, resultsId, esLocal) {
     const input = document.getElementById(inputId);
     const results = document.getElementById(resultsId);
+    
     input.addEventListener('input', () => {
-        const busqueda = input.value.toLowerCase().trim();
+        const busquedaRaw = input.value.trim();
         results.innerHTML = '';
-        if (busqueda.length < 2) return;
-        const coincidencias = equipos.filter(e => e.nombre.toLowerCase().includes(busqueda)).slice(0, 8);
+        if (busquedaRaw.length < 2) return;
+        
+        const busquedaNormalizada = normalizeText(busquedaRaw);
+        
+        const coincidencias = equipos.filter(e => 
+            normalizeText(e.nombre).includes(busquedaNormalizada)
+        ).slice(0, 8);
+        
         if (coincidencias.length === 0) {
             results.innerHTML = `<div class="suggestion" style="color:#888;">Sin coincidencias</div>`;
             return;
@@ -441,6 +533,7 @@ function setupBusqueda(inputId, resultsId, esLocal) {
             results.appendChild(div);
         });
     });
+
     document.addEventListener('click', (e) => {
         if (!input.contains(e.target) && !results.contains(e.target)) {
             setTimeout(() => results.innerHTML = '', 200);
@@ -473,6 +566,28 @@ function mostrarDatos(eq, p) {
     document.getElementById(p + 'last10').textContent = eq.ultimos10.toString();
     document.getElementById(p + 'avail').textContent = eq.disponibilidad.toFixed(1) + '%';
     document.getElementById(p + 'elo').textContent = eq.elo.toFixed(1);
+}
+
+// REDIRECCIÓN DIRECTA A LA PÁGINA PRINCIPAL DE FÚTBOL EN SOFASCORE
+function abrirSofascore() {
+    window.open("https://www.sofascore.com/football", "_blank");
+}
+
+function limpiarFormulario() {
+    equipoLocal = null;
+    equipoVisita = null;
+    
+    document.getElementById('local-search').value = '';
+    document.getElementById('away-search').value = '';
+    document.getElementById('rating-local').value = '';
+    document.getElementById('rating-visita').value = '';
+    document.getElementById('fatiga-local').value = '1.00';
+    document.getElementById('fatiga-visita').value = '1.00';
+    document.getElementById('arbitro-promedio').value = '4.50';
+    
+    document.getElementById('sim-results').style.display = 'none';
+    document.getElementById('local-data').style.display = 'none';
+    document.getElementById('away-data').style.display = 'none';
 }
 
 function obtenerParesMasRepetidos(arr1, arr2, limite = 6) {
@@ -515,102 +630,233 @@ function ejecutarSimulacion() {
         return;
     }
 
-    const difElo = equipoLocal.elo - equipoVisita.elo;
-    const factorLocal = AJUSTES.FACTOR_LOCAL;
-    const partidoIgualado = Math.abs(difElo) < AJUSTES.DRAW_THRESHOLD;
-    
-    let gLocal = (
-        equipoLocal.gf * AJUSTES.GOALS_ATTACK_WEIGHT * factorLocal +
-        equipoVisita.gc * AJUSTES.GOALS_DEFENSE_WEIGHT
-    );
-    let gVisita = (
-        equipoVisita.gf * AJUSTES.GOALS_ATTACK_WEIGHT +
-        equipoLocal.gc * AJUSTES.GOALS_DEFENSE_WEIGHT
-    );
-    
-    const eloBoost = difElo * AJUSTES.ELO_INFLUENCE;
-    gLocal += eloBoost * 0.5;
-    gVisita -= eloBoost * 0.5;
-    
-    if (partidoIgualado) {
-        gLocal *= AJUSTES.DRAW_GOALS_RED;
-        gVisita *= AJUSTES.DRAW_GOALS_RED;
-    }
-    
-    gLocal = Math.max(AJUSTES.MIN_GOALS, gLocal);
-    gVisita = Math.max(AJUSTES.MIN_GOALS, gVisita);
+    const multFatigaLocal = parseFloat(document.getElementById('fatiga-local').value) || 1.0;
+    const multFatigaVisita = parseFloat(document.getElementById('fatiga-visita').value) || 1.0;
 
-    const corLocal = equipoLocal.corners * AJUSTES.CORNERS_HOME_BOOST;
-    const corVisita = equipoVisita.corners;
+    const valRatingLocal = document.getElementById('rating-local').value.trim();
+    const valRatingVisita = document.getElementById('rating-visita').value.trim();
+
+    const ratingL = valRatingLocal !== "" ? parseFloat(valRatingLocal) : 6.70;
+    const ratingV = valRatingVisita !== "" ? parseFloat(valRatingVisita) : 6.70;
+
+    const multSofascoreLocal = Math.max(0.70, Math.min(1.30, 1 + (ratingL - 6.70) * 0.18));
+    const multSofascoreVisita = Math.max(0.70, Math.min(1.30, 1 + (ratingV - 6.70) * 0.18));
+
+    const promArbitro = parseFloat(document.getElementById('arbitro-promedio').value) || 4.50;
+    const factorArbitro = promArbitro / 4.50;
+
+    const difElo = equipoLocal.elo - equipoVisita.elo;
+    const partidoIgualado = Math.abs(difElo) < AJUSTES.DRAW_THRESHOLD;
+
+    const factorRachaLocal = (0.85 + (equipoLocal.ultimos10 / 10) * 0.30) * multFatigaLocal;
+    const factorRachaVisita = (0.85 + (equipoVisita.ultimos10 / 10) * 0.30) * multFatigaVisita;
+
+    let lambdaGolesLocal = (
+        ((equipoLocal.gf * 0.35 + equipoLocal.xg * 0.30) * multSofascoreLocal * AJUSTES.FACTOR_LOCAL_GOALS) +
+        ((equipoVisita.gc * 0.35 + equipoVisita.xga * 0.30) / multSofascoreVisita)
+    ) * factorRachaLocal;
+
+    let lambdaGolesVisita = (
+        ((equipoVisita.gf * 0.35 + equipoVisita.xg * 0.30) * multSofascoreVisita) +
+        ((equipoLocal.gc * 0.35 + equipoLocal.xga * 0.30) / multSofascoreLocal)
+    ) * factorRachaVisita;
+
+    const eloBoost = difElo * AJUSTES.ELO_INFLUENCE;
+    lambdaGolesLocal += eloBoost * 0.5;
+    lambdaGolesVisita -= eloBoost * 0.5;
+
+    if (partidoIgualado) {
+        lambdaGolesLocal *= AJUSTES.DRAW_GOALS_RED;
+        lambdaGolesVisita *= AJUSTES.DRAW_GOALS_RED;
+    }
+
+    lambdaGolesLocal = Math.max(AJUSTES.MIN_GOALS, lambdaGolesLocal);
+    lambdaGolesVisita = Math.max(AJUSTES.MIN_GOALS, lambdaGolesVisita);
+
+    const mediaGlobalCorners = prom(equipos.map(e => e.corners)) || 4.8;
+    const cornersConcedidosLocal = Math.min(8.0, Math.max(2.0, equipoLocal.gc * 2.2));
+    const cornersConcedidosVisita = Math.min(8.0, Math.max(2.0, equipoVisita.gc * 2.2));
+
+    const presionLocal = (equipoLocal.tiros / 12.0) * multSofascoreLocal;
+    const presionVisita = (equipoVisita.tiros / 12.0) * multSofascoreVisita;
+
+    let lambdaCornersLocal = mediaGlobalCorners + 
+        (((equipoLocal.corners * multSofascoreLocal) - mediaGlobalCorners) * 0.45 * presionLocal) + 
+        ((cornersConcedidosVisita - mediaGlobalCorners) * 0.35) + 0.30;
+
+    let lambdaCornersVisita = mediaGlobalCorners + 
+        (((equipoVisita.corners * multSofascoreVisita) - mediaGlobalCorners) * 0.45 * presionVisita) + 
+        ((cornersConcedidosLocal - mediaGlobalCorners) * 0.35);
+
+    lambdaCornersLocal = Math.max(1.5, Math.min(8.5, lambdaCornersLocal));
+    lambdaCornersVisita = Math.max(1.0, Math.min(7.5, lambdaCornersVisita));
+
+    const mediaGlobalFaltas = prom(equipos.map(e => e.faltas)) || 12.0;
+    const faltasCruzadasLocal = (equipoLocal.faltas * 0.55) + (equipoVisita.faltas * 0.45);
+    const faltasCruzadasVisita = (equipoVisita.faltas * 0.55) + (equipoLocal.faltas * 0.45);
     
-    const cardLocal = equipoLocal.tarjetas;
-    const cardVisita = equipoVisita.tarjetas * AJUSTES.CARDS_AWAY_BOOST;
+    const tensionPartido = (faltasCruzadasLocal + faltasCruzadasVisita) / (2 * mediaGlobalFaltas);
+
+    let lambdaTarjetasLocal = ((equipoLocal.tarjetas * 0.65) + (faltasCruzadasLocal * 0.14 * tensionPartido * 0.35)) * factorArbitro;
+    let lambdaTarjetasVisita = (((equipoVisita.tarjetas * 0.65) + (faltasCruzadasVisita * 0.14 * tensionPartido * 0.35)) * AJUSTES.CARDS_AWAY_BOOST) * factorArbitro;
+
+    lambdaTarjetasLocal = Math.max(0.5, Math.min(6.5, lambdaTarjetasLocal));
+    lambdaTarjetasVisita = Math.max(0.5, Math.min(7.0, lambdaTarjetasVisita));
 
     let victoriasLocal = 0, victoriasVisita = 0, empates = 0;
     const gLocalSim = [], gVisitaSim = [];
     const corLocalSim = [], corVisitaSim = [];
     const cardLocalSim = [], cardVisitaSim = [];
-    
+
     for (let i = 0; i < SIMULACIONES; i++) {
-        const efLocal = 1 + (Math.random() - 0.5) * 2 * AJUSTES.EFFICIENCY_VAR;
-        const efVisita = 1 + (Math.random() - 0.5) * 2 * AJUSTES.EFFICIENCY_VAR;
-        
-        const golL = poisson(gLocal * efLocal);
-        const golV = poisson(gVisita * efVisita);
+        let golL = poisson(lambdaGolesLocal);
+        let golV = poisson(lambdaGolesVisita);
+
+        if (golL <= 1 && golV <= 1) {
+            const r = Math.random();
+            if (golL === 0 && golV === 0 && r < 0.08) golL += (Math.random() < 0.5 ? 1 : 0);
+            else if (golL === 1 && golV === 1 && r < 0.05) { golL = 0; golV = 0; }
+        }
+
         gLocalSim.push(golL);
         gVisitaSim.push(golV);
-        
-        const coL = Math.max(0, Math.round(normalRandom(corLocal, 1.2)));
-        const coV = Math.max(0, Math.round(normalRandom(corVisita, 1.0)));
+
+        const coL = poisson(lambdaCornersLocal);
+        const coV = poisson(lambdaCornersVisita);
         corLocalSim.push(coL);
         corVisitaSim.push(coV);
-        
-        const caL = Math.max(0, Math.round(normalRandom(cardLocal, 0.8)));
-        const caV = Math.max(0, Math.round(normalRandom(cardVisita, 0.8)));
+
+        const caL = poisson(lambdaTarjetasLocal);
+        const caV = poisson(lambdaTarjetasVisita);
         cardLocalSim.push(caL);
         cardVisitaSim.push(caV);
-        
+
         if (golL > golV) victoriasLocal++;
         else if (golV > golL) victoriasVisita++;
         else empates++;
     }
 
-    const pLocal = (victoriasLocal / SIMULACIONES * 100).toFixed(1);
-    const pEmpate = (empates / SIMULACIONES * 100).toFixed(1);
-    const pVisita = (victoriasVisita / SIMULACIONES * 100).toFixed(1);
-    
-    const mas25 = (gLocalSim.filter((v,i) => v + gVisitaSim[i] >= 3).length / SIMULACIONES * 100).toFixed(1);
-    const ambos = (gLocalSim.filter((v,i) => v >= 1 && gVisitaSim[i] >= 1).length / SIMULACIONES * 100).toFixed(1);
+    const pLocal = (victoriasLocal / SIMULACIONES * 100);
+    const pEmpate = (empates / SIMULACIONES * 100);
+    const pVisita = (victoriasVisita / SIMULACIONES * 100);
 
-    const promedioCorL = (corLocalSim.reduce((a, b) => a + b, 0) / SIMULACIONES);
-    const promedioCorV = (corVisitaSim.reduce((a, b) => a + b, 0) / SIMULACIONES);
-    const promedioCardL = (cardLocalSim.reduce((a, b) => a + b, 0) / SIMULACIONES);
-    const promedioCardV = (cardVisitaSim.reduce((a, b) => a + b, 0) / SIMULACIONES);
+    const mas15 = (gLocalSim.filter((v,i) => v + gVisitaSim[i] >= 2).length / SIMULACIONES * 100);
+    const mas25 = (gLocalSim.filter((v,i) => v + gVisitaSim[i] >= 3).length / SIMULACIONES * 100);
+    const ambos = (gLocalSim.filter((v,i) => v >= 1 && gVisitaSim[i] >= 1).length / SIMULACIONES * 100);
 
-    const tirosLocal = equipoLocal.tiros * factorLocal;
-    const tirosVisita = equipoVisita.tiros;
-    const tirosTotal = tirosLocal + tirosVisita;
+    const promCorL = (corLocalSim.reduce((a, b) => a + b, 0) / SIMULACIONES);
+    const promCorV = (corVisitaSim.reduce((a, b) => a + b, 0) / SIMULACIONES);
+    const totalCorners = promCorL + promCorV;
+
+    const promCardL = (cardLocalSim.reduce((a, b) => a + b, 0) / SIMULACIONES);
+    const promCardV = (cardVisitaSim.reduce((a, b) => a + b, 0) / SIMULACIONES);
+    const totalCards = promCardL + promCardV;
+
+    const tirosTotal = (equipoLocal.tiros * AJUSTES.FACTOR_LOCAL_GOALS * multSofascoreLocal) + (equipoVisita.tiros * multSofascoreVisita);
+
+    const poderAtaqueLocal = (equipoLocal.gf * 0.6) + (equipoLocal.xg * 0.4);
+    const poderAtaqueVisita = (equipoVisita.gf * 0.6) + (equipoVisita.xg * 0.4);
+
+    const solidezDefLocal = (equipoLocal.gc * 0.6) + (equipoLocal.xga * 0.4);
+    const solidezDefVisita = (equipoVisita.gc * 0.6) + (equipoVisita.xga * 0.4);
+
+    let mejorAtaqueTxt = "";
+    if (Math.abs(poderAtaqueLocal - poderAtaqueVisita) < 0.08) {
+        mejorAtaqueTxt = "Empate técnico";
+    } else if (poderAtaqueLocal > poderAtaqueVisita) {
+        mejorAtaqueTxt = `${equipoLocal.nombre} (${equipoLocal.gf.toFixed(2)} GF/p)`;
+    } else {
+        mejorAtaqueTxt = `${equipoVisita.nombre} (${equipoVisita.gf.toFixed(2)} GF/p)`;
+    }
+
+    let mejorDefensaTxt = "";
+    if (Math.abs(solidezDefLocal - solidezDefVisita) < 0.08) {
+        mejorDefensaTxt = "Empate técnico";
+    } else if (solidezDefLocal < solidezDefVisita) {
+        mejorDefensaTxt = `${equipoLocal.nombre} (${equipoLocal.gc.toFixed(2)} GC/p)`;
+    } else {
+        mejorDefensaTxt = `${equipoVisita.nombre} (${equipoVisita.gc.toFixed(2)} GC/p)`;
+    }
+
+    let diagnosticoTxt = "";
+    if (poderAtaqueLocal > poderAtaqueVisita && solidezDefLocal < solidezDefVisita) {
+        diagnosticoTxt = `Dominio integral estadístico para ${equipoLocal.nombre}`;
+    } else if (poderAtaqueVisita > poderAtaqueLocal && solidezDefVisita < solidezDefLocal) {
+        diagnosticoTxt = `Dominio integral estadístico para ${equipoVisita.nombre}`;
+    } else {
+        diagnosticoTxt = "Partido de contraste: Ataque dominante vs Defensa sólida";
+    }
 
     document.getElementById('sim-results').style.display = 'block';
     document.getElementById('match-name').textContent = `${equipoLocal.nombre} vs ${equipoVisita.nombre}`;
-    document.getElementById('p-local').textContent = pLocal + '%';
-    document.getElementById('p-draw').textContent = pEmpate + '%';
-    document.getElementById('p-away').textContent = pVisita + '%';
-    document.getElementById('g-local-exp').textContent = gLocal.toFixed(2);
-    document.getElementById('g-away-exp').textContent = gVisita.toFixed(2);
-    document.getElementById('corner-local-exp').textContent = promedioCorL.toFixed(1);
-    document.getElementById('corner-away-exp').textContent = promedioCorV.toFixed(1);
-    document.getElementById('card-local-exp').textContent = promedioCardL.toFixed(1);
-    document.getElementById('card-away-exp').textContent = promedioCardV.toFixed(1);
+    document.getElementById('p-local').textContent = pLocal.toFixed(1) + '%';
+    document.getElementById('p-draw').textContent = pEmpate.toFixed(1) + '%';
+    document.getElementById('p-away').textContent = pVisita.toFixed(1) + '%';
+    document.getElementById('g-local-exp').textContent = lambdaGolesLocal.toFixed(2);
+    document.getElementById('g-away-exp').textContent = lambdaGolesVisita.toFixed(2);
+    
+    document.getElementById('best-attack-name').textContent = mejorAtaqueTxt;
+    document.getElementById('best-defense-name').textContent = mejorDefensaTxt;
+    document.getElementById('tactical-summary').textContent = diagnosticoTxt;
+
+    document.getElementById('corner-local-exp').textContent = promCorL.toFixed(1);
+    document.getElementById('corner-away-exp').textContent = promCorV.toFixed(1);
+    document.getElementById('card-local-exp').textContent = promCardL.toFixed(1);
+    document.getElementById('card-away-exp').textContent = promCardV.toFixed(1);
     document.getElementById('s-shots').textContent = tirosTotal.toFixed(1);
-    document.getElementById('s-corners').textContent = (promedioCorL + promedioCorV).toFixed(1);
-    document.getElementById('s-cards').textContent = (promedioCardL + promedioCardV).toFixed(2);
-    document.getElementById('s-over25').textContent = mas25 + '%';
-    document.getElementById('s-btts').textContent = ambos + '%';
+    document.getElementById('s-corners').textContent = totalCorners.toFixed(1);
+    document.getElementById('s-cards').textContent = totalCards.toFixed(2);
+    document.getElementById('s-over25').textContent = mas25.toFixed(1) + '%';
+    document.getElementById('s-btts').textContent = ambos.toFixed(1) + '%';
+
+    generarParleySeguro({
+        pLocal, pVisita, pEmpate, mas15, mas25, ambos, totalCorners, totalCards,
+        promCorL, promCorV, eqL: equipoLocal.nombre, eqV: equipoVisita.nombre
+    });
 
     mostrarPares(obtenerParesMasRepetidos(gLocalSim, gVisitaSim, 6), 'pairs-goals');
     mostrarPares(obtenerParesMasRepetidos(corLocalSim, corVisitaSim, 6), 'pairs-corners');
     mostrarPares(obtenerParesMasRepetidos(cardLocalSim, cardVisitaSim, 6), 'pairs-cards');
+}
+
+function generarParleySeguro(m) {
+    const contenedor = document.getElementById('parley-content');
+    contenedor.innerHTML = '';
+    const selecciones = [];
+
+    if (m.pLocal + m.pEmpate >= 72) {
+        selecciones.push({ texto: `Gana/Empate: ${m.eqL} (Doble Oportunidad)`, prob: (m.pLocal + m.pEmpate).toFixed(1) });
+    } else if (m.pVisita + m.pEmpate >= 72) {
+        selecciones.push({ texto: `Gana/Empate: ${m.eqV} (Doble Oportunidad)`, prob: (m.pVisita + m.pEmpate).toFixed(1) });
+    }
+
+    if (m.mas15 >= 70) {
+        selecciones.push({ texto: `Más de 1.5 Goles totales`, prob: m.mas15.toFixed(1) });
+    }
+
+    const lineaCornersBase = Math.floor(m.totalCorners - 2.5);
+    if (lineaCornersBase >= 5) {
+        selecciones.push({ texto: `Más de ${lineaCornersBase}.5 Córners totales`, prob: "82.5" });
+    }
+
+    const lineaTarjetasBase = Math.floor(m.totalCards - 1.5);
+    if (lineaTarjetasBase >= 2) {
+        selecciones.push({ texto: `Más de ${lineaTarjetasBase}.5 Tarjetas totales`, prob: "78.0" });
+    }
+
+    if (selecciones.length === 0) {
+        contenedor.innerHTML = `<div style="font-size:13px; color:#666;">Partido muy cerrado. Se recomienda precaución.</div>`;
+        return;
+    }
+
+    selecciones.slice(0, 3).forEach(item => {
+        contenedor.innerHTML += `
+            <div class="parley-item">
+                <span>📌 <strong>${item.texto}</strong></span>
+                <span class="parley-prob">${item.prob}% prob.</span>
+            </div>
+        `;
+    });
 }
 
 function mostrarRanking(tipo, event) {
@@ -682,8 +928,8 @@ function generarRankings() {
 }
 
 function llenarRanking(id, lista, formatoValor) {
-    const contenedor = document.innerHTML = '';
     const cont = document.getElementById(id);
+    if (!cont) return;
     cont.innerHTML = '';
     lista.forEach((eq, idx) => {
         cont.innerHTML += `
@@ -710,6 +956,7 @@ function actualizarResumen() {
 }
 
 function prom(arr) {
+    if (!arr.length) return 0;
     return arr.reduce((s,v) => s+v, 0) / arr.length;
 }
 
@@ -718,12 +965,6 @@ function poisson(lambda) {
     let p = 1, k = 0;
     do { k++; p *= Math.random(); } while (p > L);
     return k - 1;
-}
-
-function normalRandom(media, desv) {
-    const u1 = Math.random(), u2 = Math.random();
-    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    return media + z * desv;
 }
 </script>
 </body>
